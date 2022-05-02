@@ -1,10 +1,8 @@
 #!/usr/bin/env bpftrace
 #include <linux/kernel.h>
 #include <asm/unistd.h>
-// struct MyStruct {
-//     unsigned long sct[300];      
-// }
-// $s = (struct MyStruct *) arg0;
+
+// check syscall-fun in kernel text boundary
 
 BEGIN
 {
@@ -15,16 +13,19 @@ BEGIN
         // printf("%s \n",ksym(   *(*((uint64)@sys_call_table)+(uint64)$i*64)  ));
 //--------------------------------------------------------------------------------------------------------------    
     @sys_call_table = kaddr("sys_call_table");
+    @text_start = kaddr("_stext");
+    @text_end = kaddr("_etext");
     // printf("sys_call_table is %p \n",@sys_call_table);  
-    $a = (uint64)@sys_call_table - (uint64)0x1000000;
-    $b = (uint64)@sys_call_table + (uint64)0x1000000;
+    printf("+++++++++++ test_range : %p  ~ %p ++++++++++++++++ \n",@text_start,@text_end);
+    // $a = (uint64)@sys_call_table - (uint64)0x1000000;
+    // $b = (uint64)@sys_call_table + (uint64)0x1000000;
     $i = 0; 
     while ($i <= 335) { 
         // printf("%d ", $i);  
         // printf("    sys_call_table[%d] is %p    ",$i,*(((uint64)@sys_call_table)+(uint64)$i*8)); 
         // printf("%s \n",ksym(*(((uint64)@sys_call_table)+(uint64)$i*8) ));
         $addr = (uint64)*(((uint64)@sys_call_table)+(uint64)$i*8);
-        if((uint64)$addr<(uint64)$a || (uint64)$addr>(uint64)$b){
+        if((uint64)$addr<(uint64)@text_start || (uint64)$addr>(uint64)@text_end){     // check in kernel text boundary
             printf("+++++++++++ sys_call_table[%d] is be hooked ++++++++++++++++ \n",$i);
         }
 
