@@ -4,33 +4,36 @@
 
 // check syscall-fun in kernel text boundary
 
-BEGIN
+// BEGIN
+// kretprobe:first_module kretprobe:__ia32_sys_init_module  kretprobe:do_init_module kretprobe:__x64_sys_init_module
+kretprobe:do_init_module  // right
 {
 	printf("trace syscalls to detect LKM-Rootkit ...... Hit Ctrl-C to end.\n");
+    $sys_call_table = kaddr("sys_call_table");
+    $text_start = kaddr("_stext");
+    $text_end = kaddr("_etext");
+    printf("+++++++++++ kernel text_range : %p  ~ %p ++++++++++++++++ \n",$text_start,$text_end);
     // @nr_syscall = kaddr("NR_syscalls");
     // printf("NR_syscalls is %p \n",@nr_syscall);
     // printf("    sys_call_table is %p    ",*(@sys_call_table)+$i*8); *(((uint64)@sys_call_table)+(uint64)$i*8) 
-        // printf("%s \n",ksym(   *(*((uint64)@sys_call_table)+(uint64)$i*64)  ));
-//--------------------------------------------------------------------------------------------------------------    
-    @sys_call_table = kaddr("sys_call_table");
-    @text_start = kaddr("_stext");
-    @text_end = kaddr("_etext");
+    // printf("%s \n",ksym(   *(*((uint64)@sys_call_table)+(uint64)$i*64)  ));
     // printf("sys_call_table is %p \n",@sys_call_table);  
-    printf("+++++++++++ test_range : %p  ~ %p ++++++++++++++++ \n",@text_start,@text_end);
+//--------------------------------------------------------------------------------------------------------------    
     // $a = (uint64)@sys_call_table - (uint64)0x1000000;
     // $b = (uint64)@sys_call_table + (uint64)0x1000000;
     $i = 0; 
     while ($i <= 335) { 
-        // printf("%d ", $i);  
-        // printf("    sys_call_table[%d] is %p    ",$i,*(((uint64)@sys_call_table)+(uint64)$i*8)); 
-        // printf("%s \n",ksym(*(((uint64)@sys_call_table)+(uint64)$i*8) ));
-        $addr = (uint64)*(((uint64)@sys_call_table)+(uint64)$i*8);
-        if((uint64)$addr<(uint64)@text_start || (uint64)$addr>(uint64)@text_end){     // check in kernel text boundary
+        $addr = (uint64)*(((uint64)$sys_call_table)+(uint64)$i*8);
+        // printf("sys_call_table[%d] %s \n",$i,ksym(   (uint64)$addr ));
+        if((uint64)$addr<(uint64)$text_start || (uint64)$addr>(uint64)$text_end){     // check in kernel text boundary
             printf("+++++++++++ sys_call_table[%d] is be hooked ++++++++++++++++ \n",$i);
+            printf("+++++++++++ sys_call_table[%d] is point at %s  ++++++++++++++++ \n",$i, ksym((uint64)$addr));
         }
-
         $i++}
     exit();
+    // printf("%d ", $i);  
+        // printf("    sys_call_table[%d] is %p    ",$i,*(((uint64)@sys_call_table)+(uint64)$i*8)); 
+        // printf("%s \n",ksym(*(((uint64)@sys_call_table)+(uint64)$i*8) ));
     // @sys_getdents64 = kaddr("sys_getdents64");      // ---找不到
     // printf("sys_getdents64 is %p \n",@sys_getdents64); 
     // @flag = 0;
@@ -57,7 +60,9 @@ BEGIN
 
 // }
 
-END
-{
-    clear(@sys_call_table);
-}
+// END
+// {
+//     clear(@sys_call_table);
+//     // clear(@text_end);
+//     // clear(@text_start);
+// }
